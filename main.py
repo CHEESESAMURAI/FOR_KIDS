@@ -1,14 +1,20 @@
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import InputFile
+from bs4 import BeautifulSoup
+from lxml import etree
 import requests
 
-import config
-import markups as kb
+from config import config
+from markups import markups as kb
+from data import data as te
 
 bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher(bot)
 
 file_id = 0
+
+korzina = []
+kor_state = 0
+final_sum = 0
 
 opisanie=[]
 
@@ -53,7 +59,10 @@ async def menu(msg: types.Message):
     await bot.send_message(id,'Выберите дейтсвие которое вам нужно :',reply_markup=kb.menu2)
     await bot.delete_message(msg.from_user.id, msg.message.message_id)
     await bot.delete_message(msg.from_user.id, msg.message.message_id - 1)
-
+    await bot.delete_message(msg.from_user.id, msg.message.message_id - 2)
+    await bot.delete_message(msg.from_user.id, msg.message.message_id - 3)
+    await bot.delete_message(msg.from_user.id, msg.message.message_id - 4)
+    await bot.delete_message(msg.from_user.id, msg.message.message_id - 5)
 
 @dp.callback_query_handler(text='rezhim')
 async def menu(msg: types.Message):
@@ -79,10 +88,98 @@ async def menu(msg: types.Message):
 
 @dp.callback_query_handler(text='tovar')
 async def menu(msg: types.Message):
-    global file_id
-    global opisanie
-    await bot.send_photo(chat_id=msg.from_user.id,photo=file_id,caption=opisanie[0],reply_markup=kb.back)
+    # global file_id
+    # global opisanie
+    await bot.send_message(msg.from_user.id,'Выберите категорию товара',reply_markup=kb.kategorii)
     await bot.delete_message(msg.from_user.id, msg.message.message_id)
+    # if file_id == 0:
+    #     file_id = 'https://санкт-петербург.гипермаркет-матрасов.рф/local/templates/catalog_template/img/50original.jpg'
+    # if opisanie == []:
+    #     opisanie.append('Товар отсутсвует')
+    # if len(opisanie) == 2:
+    #   opisanie.remove(opisanie[0])
+    # print(opisanie)
+    # await bot.send_photo(chat_id=msg.from_user.id,photo=file_id,caption=opisanie[0],reply_markup=kb.back)
+
+@dp.callback_query_handler(text='dji')
+async def menu(msg: types.Message):
+    global kor_state
+    URL = "https://textilegu.ru/vybor-izdelij/chto-takoe-dzhinsy.html"
+
+    webpage = requests.get(URL)
+    soup = BeautifulSoup(webpage.content, "html.parser")
+    dom = etree.HTML(str(soup))
+    print(dom.xpath('//*[@id="post-3515"]/div[3]/blockquote[1]/p[2]')[0].text)
+    kor_state = 1
+    await bot.send_photo(chat_id=msg.from_user.id,photo='https://textilegu.ru/wp-content/uploads/2019/03/7868585.jpg',caption=str(dom.xpath('//*[@id="post-3515"]/div[3]/blockquote[1]/p[2]')[0].text),reply_markup=kb.back_k)
+    await bot.delete_message(msg.from_user.id, msg.message.message_id)
+
+@dp.callback_query_handler(text='kur')
+async def menu(msg: types.Message):
+    global kor_state
+
+    kor_state = 2
+    await bot.send_message(msg.from_user.id,'')
+    await bot.delete_message(msg.from_user.id, msg.message.message_id)
+
+@dp.callback_query_handler(text='fut')
+async def menu(msg: types.Message):
+    await bot.send_message(msg.from_user.id,'')
+    await bot.delete_message(msg.from_user.id, msg.message.message_id)
+
+@dp.callback_query_handler(text='rub')
+async def menu(msg: types.Message):
+    await bot.send_message(msg.from_user.id,'')
+    await bot.delete_message(msg.from_user.id, msg.message.message_id)
+
+@dp.callback_query_handler(text='hud')
+async def menu(msg: types.Message):
+    await bot.send_message(msg.from_user.id,'')
+    await bot.delete_message(msg.from_user.id, msg.message.message_id)
+
+@dp.callback_query_handler(text='add')
+async def menu(msg: types.Message):
+    global kor_state
+    global korzina
+    global final_sum
+
+    if kor_state == 1:
+        korzina.append('Джинсы')
+        final_sum+= 10000
+    elif kor_state == 2:
+        korzina.append('Куртка')
+        final_sum+= 25000
+    await bot.send_message(msg.from_user.id,'Вы успешно добавили товар в корзину',reply_markup=kb.back)
+    await bot.delete_message(msg.from_user.id, msg.message.message_id)
+
+@dp.callback_query_handler(text='korzina')
+async def menu(msg: types.Message):
+    global korzina
+    global final_sum
+
+    if not korzina:
+        await bot.send_message(msg.from_user.id,'У вас пустая корзина :(',reply_markup=kb.back_k2)
+    else:
+        for i in korzina:
+            await bot.send_message(msg.from_user.id,str(i))
+        await bot.send_message(msg.from_user.id,'Это все ваши товары\n\nОбщая стоимость покупки: '+str(final_sum),reply_markup=kb.back_k2)
+    await bot.delete_message(msg.from_user.id, msg.message.message_id)
+
+@dp.callback_query_handler(text='clear')
+async def menu(msg: types.Message):
+    global korzina
+    global final_sum
+
+    final_sum = 0
+
+    korzina.clear()
+    await bot.send_message(msg.from_user.id,'Вы успешно почистили корзину',reply_markup=kb.back)
+    await bot.delete_message(msg.from_user.id, msg.message.message_id)
+    await bot.delete_message(msg.from_user.id, msg.message.message_id - 1)
+    await bot.delete_message(msg.from_user.id, msg.message.message_id - 2)
+    await bot.delete_message(msg.from_user.id, msg.message.message_id - 3)
+    await bot.delete_message(msg.from_user.id, msg.message.message_id - 4)
+    await bot.delete_message(msg.from_user.id, msg.message.message_id - 5)
 
 @dp.callback_query_handler(text='podpis')
 async def menu(msg: types.Message):
